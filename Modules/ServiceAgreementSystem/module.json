@@ -1,0 +1,11 @@
+{
+    "name": "ServiceAgreementSystem",
+    "alias": "serviceagreementsystem",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\ServiceAgreementSystem\\Providers\\ServiceAgreementSystemServiceProvider"
+    ],
+    "files": []
+}
