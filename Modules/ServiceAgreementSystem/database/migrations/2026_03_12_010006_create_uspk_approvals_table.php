@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('uspk_approvals', function (Blueprint $table) {
             $table->id();
             $table->foreignId('uspk_submission_id')->constrained('uspk_submissions')->onDelete('cascade');
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->integer('level');
             $table->string('role_name');
             $table->string('status')->default('pending')->index();

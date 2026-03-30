@@ -13,6 +13,8 @@
     {{-- Font Awesome --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -192,6 +194,12 @@
             margin-left: var(--sidebar-width);
             flex: 1;
             min-height: 100vh;
+        }
+
+        .mobile-header,
+        .mobile-overlay,
+        .mobile-bottom-nav {
+            display: none;
         }
 
         .top-bar {
@@ -609,10 +617,134 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
-            .main-content { margin-left: 0; }
-            .page-content { padding: 20px 16px; }
+            html,
+            body {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            body {
+                display: block;
+            }
+
+            .mobile-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                position: sticky;
+                top: 0;
+                z-index: 65;
+                background: #fff;
+                border-bottom: 1px solid var(--border-color);
+                padding: 12px 16px;
+            }
+
+            .mobile-header-title {
+                font-size: 14px;
+                font-weight: 700;
+            }
+
+            .mobile-menu-btn {
+                border: 1px solid var(--border-color);
+                background: #fff;
+                color: var(--text-primary);
+                border-radius: 10px;
+                width: 38px;
+                height: 38px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 80;
+                box-shadow: 0 18px 35px rgba(15, 23, 42, 0.25);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .mobile-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.45);
+                z-index: 70;
+            }
+
+            .mobile-overlay.show {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            .top-bar { display: none; }
+
+            .page-content {
+                max-width: 100%;
+                overflow-x: hidden;
+                padding: 16px 12px calc(78px + env(safe-area-inset-bottom));
+            }
+
             .form-row { grid-template-columns: 1fr; }
+
+            .table-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .mobile-bottom-nav {
+                display: block !important;
+                position: fixed !important;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100vw;
+                z-index: 75;
+                background: #fff;
+                border-top: 1px solid var(--border-color);
+                box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.08);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            .mobile-bottom-nav-inner {
+                height: 62px;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .mobile-bottom-nav a,
+            .mobile-bottom-nav button {
+                border: 0;
+                background: transparent;
+                color: #64748b;
+                text-decoration: none;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                font-size: 10px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            .mobile-bottom-nav .active {
+                color: var(--accent);
+            }
         }
 
         /* Utility */
@@ -632,8 +764,12 @@
     @stack('styles')
 </head>
 <body>
+    @include('components.impersonation-banner')
+    @include('components.module-hub-button')
+    <div class="mobile-overlay" id="sasMobileOverlay" onclick="toggleSasSidebar(false)"></div>
+
     {{-- Sidebar --}}
-    <aside class="sidebar">
+    <aside class="sidebar" id="sasSidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo">
                 <div class="sidebar-logo-icon">SA</div>
@@ -657,12 +793,18 @@
                 <a href="{{ route('sas.contractors.index') }}" class="sidebar-link {{ request()->routeIs('sas.contractors.*') ? 'active' : '' }}">
                     <i class="fas fa-hard-hat"></i> Kontraktor
                 </a>
+                <a href="{{ route('sas.approval-schemas.index') }}" class="sidebar-link {{ request()->routeIs('sas.approval-schemas.*') ? 'active' : '' }}">
+                    <i class="fas fa-sitemap"></i> Approval Schema
+                </a>
             </div>
 
             <div class="sidebar-section">
                 <div class="sidebar-section-title">USPK</div>
-                <a href="{{ route('sas.uspk.index') }}" class="sidebar-link {{ request()->routeIs('sas.uspk.*') ? 'active' : '' }}">
+                <a href="{{ route('sas.uspk.index') }}" class="sidebar-link {{ request()->routeIs('sas.uspk.*') && !request()->routeIs('sas.uspk-approvals.*') ? 'active' : '' }}">
                     <i class="fas fa-file-signature"></i> Pengajuan USPK
+                </a>
+                <a href="{{ route('sas.uspk-approvals.index') }}" class="sidebar-link {{ request()->routeIs('sas.uspk-approvals.*') ? 'active' : '' }}">
+                    <i class="fas fa-check-double"></i> Persetujuan Saya
                 </a>
             </div>
         </nav>
@@ -688,6 +830,16 @@
 
     {{-- Main Content --}}
     <main class="main-content">
+        <div class="mobile-header">
+            <button type="button" class="mobile-menu-btn" onclick="toggleSasSidebar(true)" aria-label="Buka menu navigasi">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="mobile-header-title">{{ $title ?? 'Dashboard' }}</div>
+            <a href="{{ route('modules.index') }}" class="mobile-menu-btn" aria-label="Kembali ke Hub Modul">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+        </div>
+
         <div class="top-bar">
             <div class="top-bar-title">{{ $title ?? 'Dashboard' }}</div>
             <div class="top-bar-actions">
@@ -724,9 +876,31 @@
         </div>
     </main>
 
+    <nav class="mobile-bottom-nav" aria-label="SAS mobile navigation">
+        <div class="mobile-bottom-nav-inner">
+            <a href="{{ route('modules.index') }}"><i class="fas fa-th-large"></i><span>Modul</span></a>
+            <a href="{{ route('sas.dashboard') }}" class="{{ request()->routeIs('sas.dashboard') ? 'active' : '' }}"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a>
+            <a href="{{ route('sas.uspk.index') }}" class="{{ request()->routeIs('sas.uspk.*') ? 'active' : '' }}"><i class="fas fa-file-signature"></i><span>USPK</span></a>
+            <button type="button" onclick="toggleSasSidebar(true)"><i class="fas fa-bars"></i><span>Menu</span></button>
+        </div>
+    </nav>
+
     <script>
         // CSRF token setup for AJAX
         window.csrfToken = '{{ csrf_token() }}';
+
+        function toggleSasSidebar(show) {
+            const sidebar = document.getElementById('sasSidebar');
+            const overlay = document.getElementById('sasMobileOverlay');
+
+            if (!sidebar || !overlay) {
+                return;
+            }
+
+            sidebar.classList.toggle('open', show);
+            overlay.classList.toggle('show', show);
+            document.body.style.overflow = show ? 'hidden' : '';
+        }
 
         // Number formatting helper
         function formatNumber(num) {

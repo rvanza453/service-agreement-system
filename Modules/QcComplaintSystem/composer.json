@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/qccomplaintsystem",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\QcComplaintSystem\\": "app/",
+            "Modules\\QcComplaintSystem\\Database\\Factories\\": "database/factories/",
+            "Modules\\QcComplaintSystem\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\QcComplaintSystem\\Tests\\": "tests/"
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "name": "QcComplaintSystem",
+    "alias": "qccomplaintsystem",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\QcComplaintSystem\\Providers\\QcComplaintSystemServiceProvider"
+    ],
+    "files": []
+}

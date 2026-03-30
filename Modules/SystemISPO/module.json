@@ -1,0 +1,11 @@
+{
+    "name": "SystemISPO",
+    "alias": "systemispo",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\SystemISPO\\Providers\\SystemISPOServiceProvider"
+    ],
+    "files": []
+}

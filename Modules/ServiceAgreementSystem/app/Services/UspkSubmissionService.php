@@ -82,14 +82,51 @@ class UspkSubmissionService
             throw new \Exception('USPK tidak dapat disubmit. Pastikan minimal ada 1 tender pembanding.');
         }
 
-        $submission->update([
-            'status' => UspkSubmission::STATUS_SUBMITTED,
-            'submitted_at' => now(),
-        ]);
+        return DB::transaction(function () use ($submission) {
+            $submission->update([
+                'status' => UspkSubmission::STATUS_SUBMITTED,
+                'submitted_at' => now(),
+            ]);
 
-        Log::info('USPK Submitted', ['uspk_id' => $submission->id]);
+            // Ambil department_id dari USPK ini
+            $departmentId = $submission->department_id;
 
-        return $submission->fresh();
+            // Cari Schema yang aktif dan terhubung dengan department ini
+            $schema = \Modules\ServiceAgreementSystem\Models\UspkApprovalSchema::where('is_active', true)
+                ->whereHas('departments', function ($q) use ($departmentId) {
+                    $q->where('department_id', $departmentId);
+                })
+                ->first(); // Asumsikan 1 department hanya punya 1 schema aktif
+
+            if (!$schema) {
+                throw new \Exception('Gagal submit: Tidak ada Skema Approval yang ditetapkan untuk Departemen ini.');
+            }
+
+            // Ambil steps/level dari schema tersebut
+            $steps = $schema->steps;
+
+            if ($steps->isEmpty()) {
+                throw new \Exception('Gagal submit: Skema Approval ditemukan tetapi tidak memiliki langkah persetujuan (Steps kosong).');
+            }
+
+            // Generate UspkApproval rows berdasarkan steps
+            foreach ($steps as $step) {
+                $submission->approvals()->create([
+                    'schema_id' => $schema->id,
+                    'level' => $step->level,
+                    'status' => \Modules\ServiceAgreementSystem\Models\UspkApproval::STATUS_PENDING,
+                    'user_id' => $step->user_id, // Assigned approver
+                ]);
+            }
+
+            Log::info('USPK Submitted with Pending Schema Approvals generated', [
+                'uspk_id' => $submission->id, 
+                'schema_id' => $schema->id,
+                'step_count' => $steps->count()
+            ]);
+
+            return $submission->fresh(['approvals']);
+        });
     }
 
     public function delete(UspkSubmission $submission): void

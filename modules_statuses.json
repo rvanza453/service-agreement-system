@@ -1,3 +1,6 @@
 {
-    "ServiceAgreementSystem": true
+    "ServiceAgreementSystem": true,
+    "QcComplaintSystem": true,
+    "SystemISPO": true,
+    "PrSystem": true
 }

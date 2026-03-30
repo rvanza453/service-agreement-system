@@ -182,11 +182,33 @@
                         <textarea id="approvalComment" class="form-control" rows="3" placeholder="Masukkan komentar (wajib untuk reject)"></textarea>
                     </div>
 
+                    <div class="form-group">
+                        <label class="form-label" style="display: flex; align-items: center; justify-content: space-between;">
+                            <span>Pilih Kontraktor Pemenang (Opsional)</span>
+                            <span class="badge badge-draft" style="font-size: 10px; font-weight: normal;">Hanya untuk Approver Tertentu</span>
+                        </label>
+                        <select id="winningContractor" class="form-control">
+                            <option value="">-- Biarkan Default / Ikuti Pilihan Sebelumnya --</option>
+                            @foreach($uspk->tenders as $tender)
+                                <option value="{{ $tender->id }}" {{ $tender->is_selected ? 'selected' : '' }}>
+                                    {{ $tender->contractor->name ?? 'Unknown' }} - Rp {{ number_format($tender->tender_value, 0, ',', '.') }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="text-muted mt-1" style="font-size: 11px;">
+                            Jika tidak dipilih, sistem akan menggunakan kontraktor yang sudah ditandai "Dipilih" saat pengajuan awal.
+                        </div>
+                    </div>
+
                     <div class="d-flex gap-2">
                         <form action="{{ route('sas.uspk.approve', $uspk) }}" method="POST" style="display: inline;">
                             @csrf
                             <input type="hidden" name="comment" id="approveComment">
-                            <button type="submit" class="btn btn-success" onclick="document.getElementById('approveComment').value = document.getElementById('approvalComment').value">
+                            <input type="hidden" name="selected_tender_id" id="approveTenderId">
+                            <button type="submit" class="btn btn-success" onclick="
+                                document.getElementById('approveComment').value = document.getElementById('approvalComment').value;
+                                document.getElementById('approveTenderId').value = document.getElementById('winningContractor').value;
+                            ">
                                 <i class="fas fa-check"></i> Approve
                             </button>
                         </form>

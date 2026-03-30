@@ -11,15 +11,34 @@ class UspkApprovalService
     /**
      * Approve USPK
      */
-    public function approve(UspkSubmission $submission, int $userId, ?string $comment = null): UspkApproval
+    public function approve(UspkSubmission $submission, int $userId, ?string $comment = null, ?int $selectedTenderId = null): UspkApproval
     {
+        $user = \App\Models\User::find($userId);
+        $isSuperAdmin = $user->hasRole('Super Admin');
+
+        // Cari pending approval yang sesuai dengan level terkecil yang belum di-approve
         $approval = $submission->approvals()
-            ->where('user_id', $userId)
             ->where('status', UspkApproval::STATUS_PENDING)
-            ->firstOrFail();
+            ->orderBy('level', 'asc')
+            ->first();
+
+        if (!$approval) {
+            throw new \Exception('Sudah tidak ada tahap yang perlu di-approve.');
+        }
+
+        // Cek apakah user yang login berhak di step tersebut
+        $step = \Modules\ServiceAgreementSystem\Models\UspkApprovalSchemaStep::where('schema_id', $approval->schema_id)
+            ->where('level', $approval->level)
+            ->first();
+
+        // Super Admin bisa override siapa saja
+        if (!$isSuperAdmin && (!$step || $step->user_id !== $userId)) {
+            throw new \Exception('Anda tidak memiliki otorisasi untuk melakukan approval pada tahap ini.');
+        }
 
         $approval->update([
             'status' => UspkApproval::STATUS_APPROVED,
+            'user_id' => $userId, // Simpan siapa yang menekan tombol
             'comment' => $comment,
             'approved_at' => now(),
         ]);
@@ -33,6 +52,21 @@ class UspkApprovalService
             $submission->update(['status' => UspkSubmission::STATUS_APPROVED]);
         } else {
             $submission->update(['status' => UspkSubmission::STATUS_IN_REVIEW]);
+        }
+
+        // Jika approver memilih kontraktor pemenang
+        if ($selectedTenderId) {
+            // Uncheck semua tender untuk USPK ini
+            $submission->tenders()->update(['is_selected' => false]);
+            
+            // Set tender yang dipilih menjadi true
+            $submission->tenders()->where('id', $selectedTenderId)->update(['is_selected' => true]);
+
+            Log::info('Contractor selected during USPK Approval', [
+                'uspk_id' => $submission->id,
+                'tender_id' => $selectedTenderId,
+                'approver_id' => $userId
+            ]);
         }
 
         Log::info('USPK Approved', [
@@ -49,13 +83,29 @@ class UspkApprovalService
      */
     public function reject(UspkSubmission $submission, int $userId, ?string $comment = null): UspkApproval
     {
+        $user = \App\Models\User::find($userId);
+        $isSuperAdmin = $user->hasRole('Super Admin');
+
         $approval = $submission->approvals()
-            ->where('user_id', $userId)
             ->where('status', UspkApproval::STATUS_PENDING)
-            ->firstOrFail();
+            ->orderBy('level', 'asc')
+            ->first();
+
+        if (!$approval) {
+            throw new \Exception('Sudah tidak ada tahap yang bisa ditolak.');
+        }
+
+        $step = \Modules\ServiceAgreementSystem\Models\UspkApprovalSchemaStep::where('schema_id', $approval->schema_id)
+            ->where('level', $approval->level)
+            ->first();
+
+        if (!$isSuperAdmin && (!$step || $step->user_id !== $userId)) {
+            throw new \Exception('Anda tidak memiliki otorisasi untuk menolak pada tahap ini.');
+        }
 
         $approval->update([
             'status' => UspkApproval::STATUS_REJECTED,
+            'user_id' => $userId,
             'comment' => $comment,
             'approved_at' => now(),
         ]);

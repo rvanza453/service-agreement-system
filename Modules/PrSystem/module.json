@@ -1,0 +1,11 @@
+{
+    "name": "PrSystem",
+    "alias": "prsystem",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\PrSystem\\Providers\\PrSystemServiceProvider"
+    ],
+    "files": []
+}
